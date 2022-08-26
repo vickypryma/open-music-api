@@ -35,18 +35,18 @@ class SongService {
     };
 
     if (title) {
-      query.text += " WHERE title ILIKE '%' || $1 || '%'";
-      query.values.push(title);
+      query.text += ' WHERE title ILIKE $1';
+      query.values.push(`%${title}%`);
     }
 
     if (performer) {
       if (title) {
-        query.text += " AND performer ILIKE '%' || $2 || '%'";
+        query.text += ' AND performer ILIKE $2';
       } else {
-        query.text += " WHERE performer ILIKE '%' || $1 || '%'";
+        query.text += ' WHERE performer ILIKE $1';
       }
 
-      query.values.push(performer);
+      query.values.push(`%${performer}%`);
     }
 
     const result = await this._pool.query(query);
