@@ -1,8 +1,8 @@
 const { nanoid } = require('nanoid');
 const { Pool } = require('pg');
-const InvariantError = require('../exceptions/InvariantError');
-const NotFoundError = require('../exceptions/NotFoundError');
-const { mapAlbumToModel } = require('../utils');
+const InvariantError = require('../../exceptions/InvariantError');
+const NotFoundError = require('../../exceptions/NotFoundError');
+const { mapAlbumToModel } = require('../../utils');
 
 class AlbumService {
   constructor() {
@@ -76,6 +76,19 @@ class AlbumService {
 
     if (!result.rowCount) {
       throw new NotFoundError('Delete failed. Album not found');
+    }
+  }
+
+  async updateAlbumCover(id, coverUrl) {
+    const query = {
+      text: 'UPDATE albums SET cover = $1 WHERE album_id = $2 RETURNING album_id',
+      values: [coverUrl, id],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rowCount) {
+      throw new NotFoundError('Update cover failed. Album not found');
     }
   }
 }

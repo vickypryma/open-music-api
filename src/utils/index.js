@@ -3,10 +3,12 @@ const mapAlbumToModel = ({
   album_id,
   name,
   year,
+  cover,
 }) => ({
   id: album_id,
   name,
   year,
+  coverUrl: cover,
 });
 
 const mapSongToModel = ({

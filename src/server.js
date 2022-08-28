@@ -1,48 +1,67 @@
 require('dotenv').config();
 
 const Hapi = require('@hapi/hapi');
+const Inert = require('@hapi/inert');
 const Jwt = require('@hapi/jwt');
+const path = require('path');
 const ClientError = require('./exceptions/ClientError');
 const TokenManager = require('./tokenize/TokenManager');
 
 // albums
 const albums = require('./api/albums');
-const AlbumService = require('./services/AlbumService');
+const AlbumService = require('./services/postgres/AlbumService');
 const AlbumValidator = require('./validator/album');
 
 // songs
 const songs = require('./api/songs');
-const SongService = require('./services/SongService');
+const SongService = require('./services/postgres/SongService');
 const SongValidator = require('./validator/song');
 
 // users
 const users = require('./api/users');
-const UserService = require('./services/UserService');
+const UserService = require('./services/postgres/UserService');
 const UserValidator = require('./validator/user');
 
 // authentications
 const authentications = require('./api/authentications');
-const AuthenticationService = require('./services/AuthenticationService');
+const AuthenticationService = require('./services/postgres/AuthenticationService');
 const AuthenticationValidator = require('./validator/authentication');
 
 // playlists
 const playlists = require('./api/playlists');
-const PlaylistService = require('./services/PlaylistService');
+const PlaylistService = require('./services/postgres/PlaylistService');
 const PlaylistValidator = require('./validator/playlist');
 
 // playlist songs
 const playlistSongs = require('./api/playlistSongs');
-const PlaylistSongService = require('./services/PlaylistSongService');
+const PlaylistSongService = require('./services/postgres/PlaylistSongService');
 const PlaylistSongValidator = require('./validator/playlist_song');
 
 // collaborations
 const collaborations = require('./api/collaborations');
-const CollaborationService = require('./services/CollaborationService');
+const CollaborationService = require('./services/postgres/CollaborationService');
 const CollaborationValidator = require('./validator/collaboration');
 
 // playlist activities
 const playlistActivities = require('./api/playlistActivities');
-const PlaylistActivityService = require('./services/PlaylistActivityService');
+const PlaylistActivityService = require('./services/postgres/PlaylistActivityService');
+
+// exports
+const _exports = require('./api/exports');
+const ProducerService = require('./services/rabbitmq/ProducerService');
+const ExportsValidator = require('./validator/exports');
+
+// uploads
+const uploads = require('./api/uploads');
+const StorageService = require('./services/storage/StorageService');
+const UploadsValidator = require('./validator/uploads');
+
+// album likes
+const albumLikes = require('./api/albumLikes');
+const AlbumLikeService = require('./services/postgres/AlbumLikeService');
+
+// cache
+const CacheService = require('./services/redis/CacheService');
 
 const init = async () => {
   const albumService = new AlbumService();
@@ -53,6 +72,9 @@ const init = async () => {
   const playlistService = new PlaylistService(collaborationService);
   const playlistSongService = new PlaylistSongService();
   const playlistActivityService = new PlaylistActivityService();
+  const storageService = new StorageService(path.resolve(__dirname, 'api/uploads/covers'));
+  const cacheService = new CacheService();
+  const albumLikeService = new AlbumLikeService(cacheService);
 
   const server = Hapi.server({
     host: process.env.HOST,
@@ -67,6 +89,9 @@ const init = async () => {
   await server.register([
     {
       plugin: Jwt,
+    },
+    {
+      plugin: Inert,
     },
   ]);
 
@@ -148,6 +173,29 @@ const init = async () => {
       options: {
         playlistService,
         playlistActivityService,
+      },
+    },
+    {
+      plugin: _exports,
+      options: {
+        playlistService,
+        producerService: ProducerService,
+        validator: ExportsValidator,
+      },
+    },
+    {
+      plugin: uploads,
+      options: {
+        albumService,
+        storageService,
+        validator: UploadsValidator,
+      },
+    },
+    {
+      plugin: albumLikes,
+      options: {
+        albumService,
+        albumLikeService,
       },
     },
   ]);
